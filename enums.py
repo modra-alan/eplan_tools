@@ -2,7 +2,6 @@ from enum import Enum
 
 
 class PartHeader(Enum):
-
     Part_number = "Part number"
     Type_number = "Type number"
     ERP_number = "ERP number"
