@@ -4,6 +4,9 @@ class EplanPart:
     def __init__(self, **kwargs):
         for attr in PartHeader:
             setattr(self, attr.name, kwargs.get(attr.value, None))
+    
+    def to_json(self) -> dict[str, Any]:
+        return {attr.value: getattr(self, attr.name) for attr in PartHeader if type(getattr(self, attr.name)) in (str, int)}
 
 class SAPPart:
     ItemName: str

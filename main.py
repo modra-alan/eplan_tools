@@ -15,61 +15,72 @@ OUTPUT_FILE = "outputs/PartData.json"
 EXCEL_PARTS_FILE = "inputs/beckhoff_parts.xlsx"
 
 
-def main():
-    logging.basicConfig(level=logging.INFO)
+def post_request():
     df = pd.read_excel(EXCEL_PARTS_FILE, header=1)
+    parts = [EplanPart(**part) for part in df.to_dict(orient="records")]  # type: ignore
+    api_controller = APIController()
+    response = api_controller.post_parts(
+        [getattr(part, PartHeader.Type_number.name) for part in parts[:50]]
+    )
+    print(response.json())
 
-    # column_map = map_columns_to_enum(df.columns)
 
-    with open(API_RESULTS_FILE, "r") as f:
-        results = format_api_results(json.load(f))
+def main():
+    post_request()
+    # logging.basicConfig(level=logging.INFO)
+    # df = pd.read_excel(EXCEL_PARTS_FILE, header=1)
 
-    def query_df(df: pd.DataFrame, query: str):
-        return [
-            EplanPart(**row)  # type: ignore
-            for row in df[
-                df[PartHeader.Type_number.value].str.contains(query, na=False)
-            ].to_dict(orient="records")
-        ]
+    # # column_map = map_columns_to_enum(df.columns)
 
-    matched_parts: dict[
-        str,
-        dict[str, list[SAPPart] | list[EplanPart] | list[tuple[EplanPart, SAPPart]]],
-    ] = {
-        query: {
-            "sap_parts": sap_parts,
-            "eplan_parts": query_df(df, query),
-            "matches": [],
-        }
-        for query, sap_parts in results.items()
-    }
-    for k, v in matched_parts.items():
-        for eplan_part in v["eplan_parts"]:
-            if not isinstance(eplan_part, EplanPart):
-                raise TypeError(f"Expected EplanPart, got {type(eplan_part)}")
-            for sap_part in v["sap_parts"]:
-                if not isinstance(sap_part, SAPPart):
-                    raise TypeError(f"Expected SAPPart, got {type(sap_part)}")
-                eplan_part_name = str(
-                    getattr(eplan_part, PartHeader.Type_number.name)
-                ).strip()
-                if any(
-                    eplan_part_name in val
-                    for val in [sap_part.ItemName, sap_part.FrgnName]
-                ):
-                    v["matches"].append((eplan_part, sap_part))  # type: ignore
+    # with open(API_RESULTS_FILE, "r") as f:
+    #     results = format_api_results(json.load(f))
 
-    for k, v in matched_parts.items():
-        if not v["matches"]:
-            continue
-        print(f"Query:          {k}")
-        print(f"Matches:        {v['matches']}")
-        print(
-            f"SAP Parts:      {[part.ItemName for part in v['sap_parts'] if isinstance(part, SAPPart)]}"
-        )
-        print(
-            f"Eplan Parts:    {[getattr(part, PartHeader.Type_number.name) for part in v['eplan_parts']]}"
-        )
+    # def query_df(df: pd.DataFrame, query: str):
+    #     return [
+    #         EplanPart(**row)  # type: ignore
+    #         for row in df[
+    #             df[PartHeader.Type_number.value].str.contains(query, na=False)
+    #         ].to_dict(orient="records")
+    #     ]
+
+    # matched_parts: dict[
+    #     str,
+    #     dict[str, list[SAPPart] | list[EplanPart] | list[tuple[EplanPart, SAPPart]]],
+    # ] = {
+    #     query: {
+    #         "sap_parts": sap_parts,
+    #         "eplan_parts": query_df(df, query),
+    #         "matches": [],
+    #     }
+    #     for query, sap_parts in results.items()
+    # }
+    # for k, v in matched_parts.items():
+    #     for eplan_part in v["eplan_parts"]:
+    #         if not isinstance(eplan_part, EplanPart):
+    #             raise TypeError(f"Expected EplanPart, got {type(eplan_part)}")
+    #         for sap_part in v["sap_parts"]:
+    #             if not isinstance(sap_part, SAPPart):
+    #                 raise TypeError(f"Expected SAPPart, got {type(sap_part)}")
+    #             eplan_part_name = str(
+    #                 getattr(eplan_part, PartHeader.Type_number.name)
+    #             ).strip()
+    #             if any(
+    #                 eplan_part_name in val
+    #                 for val in [sap_part.ItemName, sap_part.FrgnName]
+    #             ):
+    #                 v["matches"].append((eplan_part, sap_part))  # type: ignore
+
+    # for k, v in matched_parts.items():
+    #     if not v["matches"]:
+    #         continue
+    #     print(f"Query:          {k}")
+    #     print(f"Matches:        {v['matches']}")
+    #     print(
+    #         f"SAP Parts:      {[part.ItemName for part in v['sap_parts'] if isinstance(part, SAPPart)]}"
+    #     )
+    #     print(
+    #         f"Eplan Parts:    {[getattr(part, PartHeader.Type_number.name) for part in v['eplan_parts']]}"
+    #     )
 
 
 def format_api_results(api_results: dict[str, Any]):

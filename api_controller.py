@@ -1,5 +1,6 @@
 from typing import Any
 import requests
+from classes import EplanPart
 
 URL_BASE = "http://127.0.0.1:5000/api/v1"
 
@@ -25,3 +26,6 @@ class APIController:
             return {"data": response.json()}
         except Exception as er:
             return {"message": str(er)}
+
+    def post_parts(self, parts: list[str]):
+        return requests.post(self.url_base + "/eplan/beckhoff", json=parts)
